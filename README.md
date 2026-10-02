@@ -40,11 +40,12 @@ Open `http://localhost:3000/qr` and scan with your phone.
 
 1. Push this repo to GitHub.
 2. Create a **Web Service** on [Render](https://render.com) (or use `render.yaml`).
-3. Set env vars:
-   - `MONGODB_URI` — Atlas connection string
+3. In Render → your service → **Environment**, add the same vars as local `.env` (Render does **not** use the `.env` file):
+   - `MONGODB_URI` — Atlas connection string (required)
    - `ALLOWED_NUMBERS` — your numbers, digits only, comma-separated, e.g. `9725XXXXXXXX,9725YYYYYYYY`
    - `GROUP_NAME` — default `קניות` (optional if you set `GROUP_JID`)
    - `GROUP_JID` — optional, e.g. `120363...@g.us` (logged when the group is auto-detected)
+   - Then **Manual Deploy** so the new vars apply. Also allow `0.0.0.0/0` in Atlas Network Access so Render can connect.
 4. After deploy, open `https://YOUR-SERVICE.onrender.com/qr` and scan with **your** WhatsApp → Linked Devices.
 5. Create the grocery group, send a test message like `?`.
 

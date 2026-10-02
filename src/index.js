@@ -1,4 +1,4 @@
-require('dotenv').config()
+require('dotenv').config({ quiet: true, path: '.env' })
 
 const express = require('express')
 const { connectDb } = require('./db')
@@ -10,6 +10,16 @@ const {
 
 const app = express()
 const port = Number(process.env.PORT) || 3000
+
+function requireEnv(name) {
+  const value = process.env[name]
+  if (!value || !String(value).trim()) {
+    throw new Error(
+      `Missing env var ${name}. On Render: Dashboard → your service → Environment → Add ${name}, then Manual Deploy.`
+    )
+  }
+  return value
+}
 
 app.get('/health', (_req, res) => {
   const status = getConnectionStatus()
@@ -54,17 +64,26 @@ app.get('/', (_req, res) => {
 })
 
 async function main() {
+  requireEnv('MONGODB_URI')
+  if (!process.env.ALLOWED_NUMBERS) {
+    console.warn('ALLOWED_NUMBERS is not set — anyone in the grocery group can use the bot')
+  }
+
   await connectDb()
   console.log('MongoDB connected')
 
-  await startWhatsApp()
-
-  app.listen(port, () => {
-    console.log(`HTTP listening on :${port}`)
+  // Bind HTTP early so Render sees an open port while WhatsApp connects
+  await new Promise((resolve) => {
+    app.listen(port, () => {
+      console.log(`HTTP listening on :${port}`)
+      resolve()
+    })
   })
+
+  await startWhatsApp()
 }
 
 main().catch((err) => {
-  console.error(err)
+  console.error('Startup failed:', err.message || err)
   process.exit(1)
 })
