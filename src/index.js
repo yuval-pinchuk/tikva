@@ -1,7 +1,7 @@
 require('dotenv').config({ quiet: true, path: '.env' })
 
 const express = require('express')
-const { connectDb } = require('./db')
+const { connectDb, isDbConnected } = require('./db')
 const {
   startWhatsApp,
   getConnectionStatus,
@@ -25,6 +25,7 @@ app.get('/health', (_req, res) => {
   const status = getConnectionStatus()
   res.status(200).json({
     ok: true,
+    mongo: isDbConnected() ? 'connected' : 'disconnected',
     whatsapp: status.connected ? 'connected' : 'disconnected',
     hasQr: status.hasQr,
     groupJid: status.groupJid || null
@@ -32,6 +33,14 @@ app.get('/health', (_req, res) => {
 })
 
 app.get('/qr', async (_req, res) => {
+  if (!isDbConnected()) {
+    res
+      .status(503)
+      .type('html')
+      .send('<h1>Database not connected yet</h1><p>Check Render logs.</p>')
+    return
+  }
+
   const status = getConnectionStatus()
   if (status.connected) {
     res
@@ -69,10 +78,7 @@ async function main() {
     console.warn('ALLOWED_NUMBERS is not set — anyone in the grocery group can use the bot')
   }
 
-  await connectDb()
-  console.log('MongoDB connected')
-
-  // Bind HTTP early so Render sees an open port while WhatsApp connects
+  // Bind HTTP first so Render detects an open port
   await new Promise((resolve) => {
     app.listen(port, () => {
       console.log(`HTTP listening on :${port}`)
@@ -80,7 +86,11 @@ async function main() {
     })
   })
 
+  await connectDb()
+  console.log('MongoDB connected')
+
   await startWhatsApp()
+  console.log('WhatsApp client starting')
 }
 
 main().catch((err) => {

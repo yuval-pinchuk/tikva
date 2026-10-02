@@ -45,7 +45,9 @@ Open `http://localhost:3000/qr` and scan with your phone.
    - `ALLOWED_NUMBERS` — your numbers, digits only, comma-separated, e.g. `9725XXXXXXXX,9725YYYYYYYY`
    - `GROUP_NAME` — default `קניות` (optional if you set `GROUP_JID`)
    - `GROUP_JID` — optional, e.g. `120363...@g.us` (logged when the group is auto-detected)
-   - Then **Manual Deploy** so the new vars apply. Also allow `0.0.0.0/0` in Atlas Network Access so Render can connect.
+   - Then **Manual Deploy** so the new vars apply.
+   - In Atlas → **Network Access** → **Add IP Address** → **Allow Access from Anywhere** (`0.0.0.0/0`). Render’s IPs change on the free plan; without this, Mongo often fails with a TLS/SSL error.
+   - Do not wrap `MONGODB_URI` in quotes in the Render env UI.
 4. After deploy, open `https://YOUR-SERVICE.onrender.com/qr` and scan with **your** WhatsApp → Linked Devices.
 5. Create the grocery group, send a test message like `?`.
 
