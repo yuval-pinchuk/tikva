@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: tikva-grocery-bot
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: ALLOWED_NUMBERS
+        sync: false
+      - key: GROUP_JID
+        sync: false
+      - key: GROUP_NAME
+        value: קניות
