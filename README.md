@@ -45,6 +45,7 @@ Open `http://localhost:3000/qr` and scan with your phone.
    - `ALLOWED_NUMBERS` — your numbers, digits only, comma-separated, e.g. `9725XXXXXXXX,9725YYYYYYYY`
    - `GROUP_NAME` — default `קניות` (optional if you set `GROUP_JID`)
    - `GROUP_JID` — optional, e.g. `120363...@g.us` (logged when the group is auto-detected)
+   - `SESSION_RESET_SECRET` — optional; enables `POST /reset-session` if linking gets stuck
    - Then **Manual Deploy** so the new vars apply.
    - In Atlas → **Network Access** → **Add IP Address** → **Allow Access from Anywhere** (`0.0.0.0/0`). Render’s IPs change on the free plan; without this, Mongo often fails with a TLS/SSL error.
    - Do not wrap `MONGODB_URI` in quotes in the Render env UI.
@@ -59,8 +60,24 @@ Render free sleeps after idle time. Create a free monitor (e.g. [cron-job.org](h
 
 every 5–10 minutes.
 
+### 5. Re-link after logout
+
+If WhatsApp unlinks the device, the bot clears the saved session automatically and shows a new QR.
+
+1. Open `https://YOUR-SERVICE.onrender.com/qr` (page auto-refreshes).
+2. WhatsApp → **Linked Devices** → **Link a device** → scan.
+
+No need to delete anything in MongoDB Atlas.
+
+If the QR never appears, set `SESSION_RESET_SECRET` and force a reset:
+
+```bash
+curl -X POST "https://YOUR-SERVICE.onrender.com/reset-session" -H "x-reset-secret: YOUR_SECRET"
+```
+
+Then open `/qr` again.
+
 ## Notes
 
 - Keep the grocery group for list commands only — other chat will be treated as items to add.
 - This uses an unofficial WhatsApp library on your personal account. A spare SIM is safer long-term.
-- If you get logged out, open `/qr` again and rescan.

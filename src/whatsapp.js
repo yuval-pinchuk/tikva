@@ -8,7 +8,7 @@ const {
 const { Boom } = require('@hapi/boom')
 const pino = require('pino')
 const QRCode = require('qrcode')
-const { useMongoAuthState } = require('./authState')
+const { useMongoAuthState, clearAuthState } = require('./authState')
 const { handleMessage } = require('./commands')
 
 const logger = pino({ level: 'silent' })
@@ -17,6 +17,7 @@ let sock = null
 let latestQr = null
 let connected = false
 let resolvedGroupJid = process.env.GROUP_JID || null
+let resetInFlight = false
 const sentByBot = new Set()
 const groupMetaCache = new Map()
 
@@ -58,6 +59,36 @@ function getConnectionStatus() {
 async function getQrPng() {
   if (!latestQr) return null
   return QRCode.toBuffer(latestQr, { type: 'png', width: 320, margin: 2 })
+}
+
+async function endSocketQuietly() {
+  if (!sock) return
+  try {
+    sock.ev.removeAllListeners()
+    sock.end(undefined)
+  } catch {
+    // ignore teardown errors
+  }
+  sock = null
+}
+
+async function resetSession() {
+  if (resetInFlight) {
+    return { ok: false, message: 'Reset already in progress' }
+  }
+
+  resetInFlight = true
+  try {
+    connected = false
+    latestQr = null
+    await endSocketQuietly()
+    await clearAuthState()
+    await startWhatsApp()
+    console.log('Session reset — open /qr to scan')
+    return { ok: true, message: 'Session cleared. Open /qr to scan.' }
+  } finally {
+    resetInFlight = false
+  }
 }
 
 async function sendReply(jid, text) {
@@ -210,13 +241,20 @@ async function startWhatsApp() {
       const loggedOut = statusCode === DisconnectReason.loggedOut
       console.log('WhatsApp disconnected', { statusCode, loggedOut })
 
+      if (resetInFlight) {
+        return
+      }
+
       if (!loggedOut) {
         setTimeout(() => {
           startWhatsApp().catch((err) => console.error('Reconnect failed', err))
         }, 2000)
       } else {
         latestQr = null
-        console.log('Logged out — delete auth docs in Mongo if needed, then rescan /qr')
+        console.log('Logged out — clearing auth and starting fresh QR flow')
+        setTimeout(() => {
+          resetSession().catch((err) => console.error('Logout reset failed', err))
+        }, 500)
       }
     }
   })
@@ -234,5 +272,6 @@ async function startWhatsApp() {
 module.exports = {
   startWhatsApp,
   getConnectionStatus,
-  getQrPng
+  getQrPng,
+  resetSession
 }

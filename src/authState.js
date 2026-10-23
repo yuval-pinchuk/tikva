@@ -62,4 +62,10 @@ async function useMongoAuthState() {
   }
 }
 
-module.exports = { useMongoAuthState }
+async function clearAuthState() {
+  const collection = getDb().collection('auth')
+  await collection.deleteMany({})
+  console.log('Cleared WhatsApp auth state from MongoDB')
+}
+
+module.exports = { useMongoAuthState, clearAuthState }
